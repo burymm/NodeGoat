@@ -1,18 +1,34 @@
-FROM node:12-alpine
+FROM node:20-alpine AS deps
 ENV WORKDIR /usr/src/app/
 WORKDIR $WORKDIR
 COPY package*.json $WORKDIR
-RUN npm install --production --no-cache
+RUN npm install --no-cache
 
-FROM node:12-alpine
+FROM node:20-alpine AS frontend-deps
+ENV WORKDIR /usr/src/app/
+WORKDIR $WORKDIR
+COPY code-guardian/frontend/package*.json $WORKDIR
+RUN npm install --no-cache
+
+FROM node:20-alpine AS frontend-build
+ENV WORKDIR /usr/src/app/
+WORKDIR $WORKDIR
+COPY code-guardian/frontend/ $WORKDIR
+COPY --from=frontend-deps /usr/src/app/node_modules node_modules
+RUN npm run build
+
+FROM node:20-alpine
 ENV USER node
 ENV WORKDIR /home/$USER/app
+ENV NODE_OPTIONS="--max-old-space-size=150"
+RUN apk add --no-cache git curl \
+    && curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin \
+    && rm -rf /var/cache/apk/*
 WORKDIR $WORKDIR
-COPY --from=0 /usr/src/app/node_modules node_modules
+COPY --from=deps /usr/src/app/node_modules node_modules
+COPY --from=frontend-build /usr/src/app/dist code-guardian/frontend/dist
 RUN chown $USER:$USER $WORKDIR
 COPY --chown=node . $WORKDIR
-# In production environment uncomment the next line
-#RUN chown -R $USER:$USER /home/$USER && chmod -R g-s,o-rx /home/$USER && chmod -R o-wrx $WORKDIR
-# Then all further actions including running the containers should be done under non-root user.
+RUN npx tsc -p code-guardian
 USER $USER
 EXPOSE 4000

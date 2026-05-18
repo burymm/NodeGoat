@@ -14,6 +14,7 @@ const marked = require("marked");
 //const nosniff = require('dont-sniff-mimetype');
 const app = express(); // Web framework to handle routing requests
 const routes = require("./app/routes");
+const { createGuardianRouter } = require("./code-guardian/dist/index");
 const { port, db, cookieSecret } = require("./config/config"); // Application config properties
 /*
 // Fix for A6-Sensitive Data Exposure
@@ -130,6 +131,19 @@ MongoClient.connect(db, (err, db) => {
 
     // Application routes
     routes(app, db);
+
+    // Code Guardian Frontend
+    app.use("/guardian", express.static("code-guardian/frontend/dist"));
+    app.get("/guardian/*", (req, res) => {
+        res.sendFile("code-guardian/frontend/dist/index.html", { root: __dirname });
+    });
+
+    // Code Guardian API
+    app.use("/api", createGuardianRouter(db));
+
+    // Code Guardian GraphQL
+    const { createGraphqlHandler } = require("./code-guardian/dist/index");
+    app.all("/graphql", createGraphqlHandler(db));
 
     // Template system setup
     swig.setDefaults({

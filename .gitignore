@@ -1,6 +1,15 @@
 # Node modules
 node_modules
 
+# Compiled TypeScript
+code-guardian/dist
+
+# Frontend
+code-guardian/frontend/node_modules
+code-guardian/frontend/dist
+code-guardian/frontend/src/**/*.js
+*.tsbuildinfo
+
 # Logs and databases
 *.log
 *.db

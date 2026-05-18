@@ -3,6 +3,7 @@ version: "3.7"
 services:
   web:
     build: .
+    mem_limit: 200m
     environment:
       NODE_ENV:
       MONGODB_URI: mongodb://mongo:27017/nodegoat
