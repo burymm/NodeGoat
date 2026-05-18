@@ -5,7 +5,7 @@ import fs from 'fs';
 
 const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 const GENERATE_SCRIPT = path.resolve(PROJECT_ROOT, 'code-guardian/scripts/generate-large-trivy.ts');
-const STRESS_SCRIPT = path.resolve(PROJECT_ROOT, 'code-guardian/scripts/stress-test.js');
+const STRESS_SCRIPT = path.resolve(PROJECT_ROOT, 'code-guardian/scripts/stress-test.ts');
 const OUTPUT_FILE = '/tmp/code-guardian/oom-test-trivy.json';
 
 describe('OOM stress test', () => {
@@ -15,19 +15,20 @@ describe('OOM stress test', () => {
     const gen = execFileSync('npx', ['tsx', GENERATE_SCRIPT, '50', OUTPUT_FILE], {
       timeout: 120_000,
       encoding: 'utf8',
-      maxBuffer: 1024,
+      maxBuffer: 1024 * 1024,
     });
     console.log('Generated:', gen.trim());
 
-    const result = execFileSync('node', [
-      '--max-old-space-size=150',
+    const result = execFileSync('npx', [
+      'tsx',
       STRESS_SCRIPT,
       OUTPUT_FILE,
       '31207',
     ], {
       timeout: 120_000,
       encoding: 'utf8',
-      maxBuffer: 1024 * 10,
+      maxBuffer: 1024 * 1024,
+      env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=150' },
     });
 
     expect(result).toContain('OOM test PASSED');

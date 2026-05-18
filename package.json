@@ -42,6 +42,7 @@
     "test:guardian": "cd code-guardian && npx vitest run",
     "test:e2e": "cross-env NODE_ENV=test cypress open",
     "test:ci": "cross-env NODE_ENV=test cypress run",
+    "test:all": "npm run test:guardian && cd code-guardian/frontend && npx vitest run",
     "test": "node node_modules/grunt-cli/bin/grunt test",
     "db:seed": "cross-env NODE_ENV=test grunt db-reset",
     "precommit": "grunt precommit",
