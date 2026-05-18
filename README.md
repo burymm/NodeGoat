@@ -111,6 +111,96 @@ The repo includes the Dockerfile and docker-compose.yml necessary to set up the 
    docker-compose up
    ```
 
+## Code Guardian — Vulnerability Scanner Service
+
+Code Guardian is a service built on top of NodeGoat that scans any public Git repository for security vulnerabilities using [Trivy](https://github.com/aquasecurity/trivy). It features a streaming JSON parser (OOM-safe at 150MB heap), background scan queue, REST + GraphQL APIs, and a React frontend.
+
+### Quick Start with Docker
+
+```bash
+# Start MongoDB + Code Guardian + NodeGoat
+docker-compose up
+
+# Open the dashboard:
+open http://localhost:4000/guardian
+```
+
+### Run Locally (Development)
+
+**1) Prerequisites**
+
+- Node.js 20+, MongoDB running on `localhost:27017`
+- Install Trivy: `brew install aquasecurity/trivy/trivy` (macOS) or follow [docs](https://trivy.dev/latest/getting-started/installation/)
+
+**2) Install & Build**
+
+```bash
+npm install
+npm run build:guardian          # Compile TypeScript
+cd code-guardian/frontend && npm install && cd ../..
+```
+
+**3) Start Backend (API + GraphQL + NodeGoat)**
+
+```bash
+npm run start-infra             # Start MongoDB via Docker (or use your own)
+npm start                       # Starts on http://localhost:4000
+```
+
+**4) Start Frontend (separate terminal)**
+
+```bash
+cd code-guardian/frontend
+npm run dev                     # Dev server on http://localhost:5173/guardian
+```
+
+### API Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/scan` | Start a scan — body: `{"repoUrl": "https://github.com/owner/repo"}` |
+| GET | `/api/scan/:scanId` | Get scan status + CRITICAL vulnerabilities |
+| GET/POST | `/graphql` | GraphQL — queries: `scan(id)`, `scans`; mutation: `startScan(repoUrl)` |
+| GET | `/guardian` | React SPA frontend |
+
+### How to Test a Scan
+
+```bash
+# Using curl:
+curl -X POST http://localhost:4000/api/scan \
+  -H 'Content-Type: application/json' \
+  -d '{"repoUrl":"https://github.com/OWASP/NodeGoat"}'
+
+# Response: { "scanId": "uuid", "status": "Queued" }
+
+# Poll for results (replace scanId):
+curl http://localhost:4000/api/scan/<scanId>
+
+# When finished — shows CRITICAL vulnerabilities found in the repo.
+```
+
+### Run Tests
+
+```bash
+npm run test:all                # All tests (backend 39 + frontend 17)
+npm run test:guardian           # Backend unit tests only
+npm run test:stress-full        # OOM safety validation (generates 200MB JSON, parses it)
+cd code-guardian/frontend && npx vitest run   # Frontend tests only
+```
+
+### Architecture
+
+```
+POST /api/scan  →  ScanController  →  ScanService  →  ScanWorker (async)
+                                                      ├─ GitService.clone()
+                                                      ├─ TrivyService.scan()
+                                                      └─ StreamParser.parse()
+                                                      └─ ScanStore (MongoDB)
+
+GET /api/scan/:scanId  →  ScanController  →  ScanService  →  ScanStore
+GET/POST /graphql      →  GraphQL handler  →  resolvers  →  ScanStore / ScanService
+```
+
 ### OPTION 3 - Deploy to Heroku
 
 This option uses a free ($0/month) Heroku node server.
