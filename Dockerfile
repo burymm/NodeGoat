@@ -23,7 +23,8 @@ ENV WORKDIR /home/$USER/app
 ENV NODE_OPTIONS="--max-old-space-size=150"
 RUN apk add --no-cache git curl \
     && curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/cache/apk/* \
+    && trivy image --download-db-only --cache-dir /home/$USER/.cache/trivy 2>/dev/null || true
 WORKDIR $WORKDIR
 COPY --from=deps /usr/src/app/node_modules node_modules
 COPY --from=frontend-build /usr/src/app/dist code-guardian/frontend/dist
